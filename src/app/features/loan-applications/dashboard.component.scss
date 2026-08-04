@@ -470,6 +470,7 @@
   position: relative;
   overflow: hidden;
   padding: 9px 10px;
+  font-weight: 700;
 }
 .stage-card.green {
   background: #4da686;
@@ -547,7 +548,7 @@
   padding: 0 8px;
   border-radius: 5px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   position: relative;
 }
@@ -585,7 +586,7 @@
   margin: 0;
 }
 .stage-options b {
-  font-weight: 500;
+  font-weight: 700;
 }
 .lead-panel {
   flex: 1 1 auto;
