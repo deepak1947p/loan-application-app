@@ -108,8 +108,16 @@ describe('loan utilities', () => {
     const counts = countByWorkflowStage(updated);
     expect(counts['Pending for Submission']).toBe(1);
     expect(counts['Lead Submitted']).toBe(1);
-    expect(filterAndSort(updated, { search: '', status: 'All', loanType: 'All', sort: 'date-desc' }, 'Pending for Submission')).toHaveLength(1);
-    expect(filterAndSort(updated, { search: '', status: 'All', loanType: 'All', sort: 'date-desc' })).toHaveLength(2);
+    expect(
+      filterAndSort(
+        updated,
+        { search: '', status: 'All', loanType: 'All', sort: 'date-desc' },
+        'Pending for Submission',
+      ),
+    ).toHaveLength(1);
+    expect(
+      filterAndSort(updated, { search: '', status: 'All', loanType: 'All', sort: 'date-desc' }),
+    ).toHaveLength(2);
   });
   it('searches extended fields case-insensitively with partial matching', () => {
     expect(

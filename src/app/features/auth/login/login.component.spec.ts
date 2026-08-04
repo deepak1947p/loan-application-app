@@ -17,12 +17,16 @@ describe('LoginComponent demo role selection', () => {
   it('highlights the selected demo role and populates its credentials', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     fixture.detectChanges();
-    const buttons = [...fixture.nativeElement.querySelectorAll('details button')] as HTMLButtonElement[];
+    const buttons = [
+      ...fixture.nativeElement.querySelectorAll('details button'),
+    ] as HTMLButtonElement[];
     buttons[0].click();
     fixture.detectChanges();
     expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
     expect(buttons[1].getAttribute('aria-pressed')).toBe('false');
-    expect(fixture.componentInstance.form.controls.username.value).toBe('dmi.credit.manager@demo.com');
+    expect(fixture.componentInstance.form.controls.username.value).toBe(
+      'dmi.credit.manager@demo.com',
+    );
     buttons[1].click();
     fixture.detectChanges();
     expect(buttons[0].getAttribute('aria-pressed')).toBe('false');

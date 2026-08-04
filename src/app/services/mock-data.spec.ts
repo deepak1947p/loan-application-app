@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import database from '../../../db.json';
-import {
-  LoanApplication,
-  LOAN_STATUSES,
-  WORKFLOW_STAGES,
-} from '../models/loan-application.model';
+import { LoanApplication, LOAN_STATUSES, WORKFLOW_STAGES } from '../models/loan-application.model';
 import { countByWorkflowStage, filterAndSort } from './loan-utils';
 
 const applications = database.applications as LoanApplication[];

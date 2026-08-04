@@ -10,7 +10,9 @@ describe('AuthService', () => {
   beforeEach(() => {
     sessionStorage.clear();
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [AuthService, provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [AuthService, provideHttpClient(), provideHttpClientTesting()],
+    });
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
@@ -18,9 +20,15 @@ describe('AuthService', () => {
   it('authenticates the Credit Manager and stores only the minimal session', async () => {
     const auth = TestBed.inject(AuthService);
     const result = firstValueFrom(auth.login('  dmi.credit.manager@demo.com ', 'Credit@2026'));
-    http.expectOne('http://localhost:3000/users?email=dmi.credit.manager@demo.com').flush([{
-      id: 'credit-manager-demo', email: 'dmi.credit.manager@demo.com', password: 'Credit@2026', role: 'CREDIT_MANAGER', displayName: 'Credit Manager',
-    }]);
+    http.expectOne('http://localhost:3000/users?email=dmi.credit.manager@demo.com').flush([
+      {
+        id: 'credit-manager-demo',
+        email: 'dmi.credit.manager@demo.com',
+        password: 'Credit@2026',
+        role: 'CREDIT_MANAGER',
+        displayName: 'Credit Manager',
+      },
+    ]);
     expect(await result).toBe(true);
     expect(auth.session()).toEqual({
       email: 'dmi.credit.manager@demo.com',
@@ -34,9 +42,15 @@ describe('AuthService', () => {
   it('authenticates the Customer and selects the customer landing route', async () => {
     const auth = TestBed.inject(AuthService);
     const result = firstValueFrom(auth.login('dmi.customer@demo.com', 'Customer@2026'));
-    http.expectOne('http://localhost:3000/users?email=dmi.customer@demo.com').flush([{
-      id: 'customer-demo', email: 'dmi.customer@demo.com', password: 'Customer@2026', role: 'CUSTOMER', displayName: 'DMI Customer',
-    }]);
+    http.expectOne('http://localhost:3000/users?email=dmi.customer@demo.com').flush([
+      {
+        id: 'customer-demo',
+        email: 'dmi.customer@demo.com',
+        password: 'Customer@2026',
+        role: 'CUSTOMER',
+        displayName: 'DMI Customer',
+      },
+    ]);
     expect(await result).toBe(true);
     expect(auth.role()).toBe('CUSTOMER');
     expect(auth.landingPath()).toBe('/customer/kyb');
@@ -45,9 +59,15 @@ describe('AuthService', () => {
   it('rejects invalid credentials and keeps password comparison case-sensitive', async () => {
     const auth = TestBed.inject(AuthService);
     const wrongCase = firstValueFrom(auth.login('dmi.customer@demo.com', 'customer@2026'));
-    http.expectOne('http://localhost:3000/users?email=dmi.customer@demo.com').flush([{
-      id: 'customer-demo', email: 'dmi.customer@demo.com', password: 'Customer@2026', role: 'CUSTOMER', displayName: 'DMI Customer',
-    }]);
+    http.expectOne('http://localhost:3000/users?email=dmi.customer@demo.com').flush([
+      {
+        id: 'customer-demo',
+        email: 'dmi.customer@demo.com',
+        password: 'Customer@2026',
+        role: 'CUSTOMER',
+        displayName: 'DMI Customer',
+      },
+    ]);
     expect(await wrongCase).toBe(false);
     const unknown = firstValueFrom(auth.login('unknown@demo.com', 'Customer@2026'));
     http.expectOne('http://localhost:3000/users?email=unknown@demo.com').flush([]);
@@ -76,7 +96,9 @@ describe('AuthService', () => {
       }),
     );
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [AuthService, provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [AuthService, provideHttpClient(), provideHttpClientTesting()],
+    });
     http = TestBed.inject(HttpTestingController);
     const restored = TestBed.inject(AuthService);
     expect(restored.authenticated()).toBe(true);

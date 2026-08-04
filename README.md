@@ -95,6 +95,18 @@ npm run build
 
 HTTP tests use Angular's `HttpTestingController` for fetch, failure, PATCH, authentication lookup, and Customer document POST behavior. State tests cover retry, empty responses, successful derived-state recalculation, and no local mutation after update failure.
 
+## Production deployment
+
+Create an optimized Angular build with:
+
+```bash
+npm run build
+```
+
+The browser bundle is written to `dist/loan-application-dashboard/browser`. Deploy that directory to a static host configured with an SPA fallback to `index.html`. The assignment API must run separately with `npm run mock:api`; for a real deployment, replace `apiBaseUrl` in the production environment with a secured backend URL and remove the configurable demo latency.
+
+The mock server is intended only for local evaluation. It stores PATCH and document-metadata changes directly in `db.json`, so run `npm run generate:mock-data` to restore the deterministic baseline.
+
 ## Mock API limitations
 
 - No real authentication, tokens, authorization, encryption, or audit controls.

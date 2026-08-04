@@ -1,5 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, provideRouter } from '@angular/router';
+import {
+  ActivatedRouteSnapshot,
+  Router,
+  RouterStateSnapshot,
+  provideRouter,
+} from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { authGuard, guestGuard, roleGuard } from './auth.guards';
@@ -14,7 +19,9 @@ describe('authentication guards', () => {
 
   beforeEach(() => {
     sessionStorage.clear();
-    TestBed.configureTestingModule({ providers: [AuthService, provideHttpClient(), provideRouter([])] });
+    TestBed.configureTestingModule({
+      providers: [AuthService, provideHttpClient(), provideRouter([])],
+    });
     auth = TestBed.inject(AuthService);
     router = TestBed.inject(Router);
   });
@@ -29,19 +36,31 @@ describe('authentication guards', () => {
   });
 
   it('blocks a Customer from the manager dashboard', () => {
-    auth.session.set({ email: 'dmi.customer@demo.com', role: 'CUSTOMER', displayName: 'DMI Customer' });
+    auth.session.set({
+      email: 'dmi.customer@demo.com',
+      role: 'CUSTOMER',
+      displayName: 'DMI Customer',
+    });
     const result = TestBed.runInInjectionContext(() => roleGuard('CREDIT_MANAGER')(route, state));
     expect(pathFrom(result)).toBe('/unauthorized');
   });
 
   it('blocks a Credit Manager from Customer KYB', () => {
-    auth.session.set({ email: 'dmi.credit.manager@demo.com', role: 'CREDIT_MANAGER', displayName: 'Credit Manager' });
+    auth.session.set({
+      email: 'dmi.credit.manager@demo.com',
+      role: 'CREDIT_MANAGER',
+      displayName: 'Credit Manager',
+    });
     const result = TestBed.runInInjectionContext(() => roleGuard('CUSTOMER')(route, state));
     expect(pathFrom(result)).toBe('/unauthorized');
   });
 
   it('redirects authenticated users away from login to their role home', () => {
-    auth.session.set({ email: 'dmi.customer@demo.com', role: 'CUSTOMER', displayName: 'DMI Customer' });
+    auth.session.set({
+      email: 'dmi.customer@demo.com',
+      role: 'CUSTOMER',
+      displayName: 'DMI Customer',
+    });
     const result = TestBed.runInInjectionContext(() => guestGuard(route, state));
     expect(pathFrom(result)).toBe('/customer/kyb');
   });

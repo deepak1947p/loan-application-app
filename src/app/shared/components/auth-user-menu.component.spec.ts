@@ -14,7 +14,11 @@ describe('AuthUserMenuComponent logout confirmation', () => {
     sessionStorage.clear();
     TestBed.configureTestingModule({
       imports: [AuthUserMenuComponent],
-      providers: [AuthService, provideHttpClient(), provideRouter([{ path: 'login', component: LoginStubComponent }])],
+      providers: [
+        AuthService,
+        provideHttpClient(),
+        provideRouter([{ path: 'login', component: LoginStubComponent }]),
+      ],
     });
   });
 
@@ -32,13 +36,17 @@ describe('AuthUserMenuComponent logout confirmation', () => {
 
   it('opens confirmation and Cancel preserves the session', async () => {
     const { fixture, auth } = createAuthenticatedMenu();
-    const trigger = fixture.nativeElement.querySelector('[aria-label="Logout"]') as HTMLButtonElement;
+    const trigger = fixture.nativeElement.querySelector(
+      '[aria-label="Logout"]',
+    ) as HTMLButtonElement;
     trigger.focus();
     trigger.click();
     fixture.detectChanges();
     await Promise.resolve();
     expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeTruthy();
-    const buttons = [...fixture.nativeElement.querySelectorAll('.actions button')] as HTMLButtonElement[];
+    const buttons = [
+      ...fixture.nativeElement.querySelectorAll('.actions button'),
+    ] as HTMLButtonElement[];
     expect(buttons[0].textContent?.trim()).toBe('Cancel');
     expect(document.activeElement).toBe(buttons[0]);
     buttons[0].click();
@@ -51,7 +59,9 @@ describe('AuthUserMenuComponent logout confirmation', () => {
 
   it('logs out only after the danger confirmation is confirmed', async () => {
     const { fixture, auth } = createAuthenticatedMenu();
-    const trigger = fixture.nativeElement.querySelector('[aria-label="Logout"]') as HTMLButtonElement;
+    const trigger = fixture.nativeElement.querySelector(
+      '[aria-label="Logout"]',
+    ) as HTMLButtonElement;
     trigger.focus();
     trigger.click();
     fixture.detectChanges();
