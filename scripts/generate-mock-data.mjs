@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -117,6 +117,7 @@ const remarks = [
 ];
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'db.json');
+const frontendOutput = resolve(root, 'public', 'data', 'db.json');
 const records = [];
 let sequence = 1;
 
@@ -188,5 +189,12 @@ const database = {
   customerDocuments: [],
 };
 await writeFile(output, `${JSON.stringify(database, null, 2)}\n`, 'utf8');
+await mkdir(dirname(frontendOutput), { recursive: true });
+await writeFile(
+  frontendOutput,
+  `${JSON.stringify({ applications: records, customerDocuments: [] }, null, 2)}\n`,
+  'utf8',
+);
 console.log(`Generated ${records.length} records at ${output}`);
+console.log(`Generated password-free frontend data at ${frontendOutput}`);
 console.table(actualCounts);

@@ -3,10 +3,10 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "concurrently --kill-others-on-fail --names API,ANGULAR \"npm run mock:api\" \"npm run start:app\"",
+    "start": "ng serve",
     "start:app": "ng serve",
     "mock:api": "node scripts/mock-server.mjs",
-    "start:all": "npm start",
+    "start:all": "concurrently --kill-others-on-fail --names API,ANGULAR \"npm run mock:api\" \"npm run start:app\"",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",

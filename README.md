@@ -1,6 +1,8 @@
 # DMI Finance Loan Operations & Customer KYB Demo
 
-Angular 21 standalone application with role-based demo access, a Credit Manager loan dashboard, and a mobile-first Customer KYB flow. The application uses strict TypeScript, SCSS, Reactive Forms, Signals, RxJS, Angular Router guards, `HttpClient`, and a local `json-server` REST API.
+Self-contained Angular 21 standalone application with role-based demo access, a Credit Manager
+loan dashboard, and a mobile-first Customer KYB flow. It uses strict TypeScript, SCSS, Reactive
+Forms, Signals, RxJS, Router guards, and `HttpClient` without requiring a deployed backend.
 
 ## Install and run
 
@@ -8,48 +10,78 @@ Requires Node.js 20.19+, 22.12+, or 24+.
 
 ```bash
 npm install
-npm run generate:mock-data
-```
-
-Start the API and Angular together (recommended):
-
-```bash
 npm start
 ```
 
-Or use separate terminals:
+Open `http://localhost:4200`. The application loads its data from the bundled
+`public/data/db.json` asset. No API server is required.
 
-```bash
-npm run mock:api
-npm run start:app
-```
-
-`npm run start:all` is retained as an alias for `npm start`.
-
-- Angular: `http://localhost:4200`
-- Mock API: `http://localhost:3000`
-- Development API: `http://localhost:3000`
-- Production API: `https://dmi-loan-mock-api.onrender.com`
-- API base URLs are configured in `src/environments/environment.ts` and
-  `src/environments/environment.production.ts`. Angular replaces the development file during a
-  production build.
-
-## Mock REST endpoints
-
-- `GET /applications?_page=1&_per_page=9` — a filtered and sorted application page
-- `GET /application-summary` — dynamic complete-dataset workflow totals
-- `GET /applications/:id` — one application
-- `PATCH /applications/:id` — persist status or other application changes
-- `GET /users?email=...` — demo credential lookup
-- `POST /customerDocuments` — persist Customer KYB file metadata
-
-`db.json` contains `applications`, `users`, and `customerDocuments`. The deterministic generator recreates the 724 application records and resets submitted Customer documents:
+The deterministic generator recreates the root reference database and the password-free frontend
+asset:
 
 ```bash
 npm run generate:mock-data
 ```
 
-Every workflow stage has a unique total below 100. The mock wrapper uses the installed `json-server` 1.x `_page`/`_per_page` format and adds the computed `/application-summary` endpoint.
+The legacy `npm run mock:api` and `npm run start:all` commands remain available only as optional
+local-development references. They are not used by the frontend or GitHub Pages deployment.
+
+## Frontend mock API architecture
+
+`MockApiService` loads `data/db.json` through Angular `HttpClient`, validates the response, and
+caches the base collection with `shareReplay(1)`. Feature services retain asynchronous,
+Observable-based API contracts:
+
+- `getApplications(query)` returns `PaginatedResponse<LoanApplication>`;
+- `getApplicationSummary()` calculates totals from the complete merged collection;
+- `getApplicationById(id)` returns one record;
+- `updateApplication(id, changes)` simulates a PATCH;
+- Customer document methods simulate GET and POST operations.
+
+The application service applies operations in this order:
+
+1. workflow stage;
+2. debounced global search;
+3. application ID, status, loan type, and amount range;
+4. applied-date range;
+5. numeric or date sorting;
+6. page calculation and slicing.
+
+Only the requested page is returned to the component. Table totals and total pages come from the
+API-shaped response, while dashboard cards are calculated from the full merged dataset. URL-backed
+pagination restores the current page and page size after refresh and supports browser Back/Forward.
+
+Mock timing is centralized in `src/app/core/services/mock-api.config.ts`. Normal reads, writes,
+login transitions, skeletons, error states, Retry behavior, and request cancellation remain visible
+for demonstration purposes.
+
+## Local persistence and reset
+
+The bundled JSON is read-only at runtime. Status changes are saved as compact record overrides in:
+
+```text
+dmi-demo-application-overrides-v1
+```
+
+Customer document metadata is stored in:
+
+```text
+dmi-demo-customer-documents-v1
+```
+
+Only metadata is stored; selected file binary contents are never persisted. The **Reset Demo Data**
+action in the authenticated user menu clears both keys and reloads the original bundled dataset.
+
+To demonstrate deterministic errors, add one of these query parameters before the hash route:
+
+```text
+?mockError=applications
+?mockError=summary
+?mockError=updates
+?mockError=documents
+```
+
+Normal usage never fails randomly.
 
 ## Demo credentials
 
@@ -58,40 +90,19 @@ Every workflow stage has a unique total below 100. The mock wrapper uses the ins
 | Credit Manager | `dmi.credit.manager@demo.com` | `Credit@2026`   | `/manager/dashboard` |
 | Customer       | `dmi.customer@demo.com`       | `Customer@2026` | `/customer/kyb`      |
 
-Passwords are compared only during the mock API login flow. The active browser session stores only `email`, `displayName`, and `role` in `sessionStorage`; it never stores the password.
+Credentials are demo-only and are deliberately kept out of the downloadable static JSON asset.
+The browser session stores only `email`, `displayName`, and `role` in `sessionStorage`; it never
+stores the password. Frontend authentication and route guards are demonstration controls, not a
+production security boundary.
 
-> `json-server` and Angular route guards are demonstration tools, not security boundaries. Production authentication and authorization must be implemented and enforced by a secure backend. Production APIs must never expose password records to a browser.
-
-## Data and update behavior
-
-`LoanApplicationService` normalizes the version-specific pagination body into `PaginatedResponse<T>`. `LoanDataService` owns the query state and a cancellable `switchMap` pipeline. The API applies operations in this order:
-
-1. selected workflow stage;
-2. debounced global search;
-3. application ID, status, loan type, and amount filters;
-4. applied-date range;
-5. numeric/date sorting;
-6. `_page` and `_per_page` pagination.
-
-Only the current page is retained and rendered. Table totals use API pagination metadata, while dashboard cards use `/application-summary`. Page or filter changes cancel obsolete HTTP requests. A successful status PATCH refreshes both the summary and current server page.
-
-Manager pagination is URL-backed, for example `/manager/dashboard?page=4&pageSize=10`. The route is normalized before the first API request, so refresh, bookmarks, and browser Back/Forward restore the correct server page without an initial page-one request. Supported page sizes are `5`, `9`, `10`, and `20`; invalid values fall back to `9`.
-
-The dashboard shows skeletons while `GET /applications` is pending, an API error with Retry when it fails, and a dedicated empty state for an empty collection. A status confirmation sends `PATCH /applications/:id`; local state changes only after success. Failed updates retain the drawer and original data and show a retryable error.
-
-`CustomerDocumentService` sends metadata only. File binary content stays in browser memory. A successful `POST /customerDocuments` stores customer email, document type/number, file name, size, MIME type, and submission time. Submission actions show a disabled/loading state; failures keep the confirmation sheet and form state available for retry.
-
-## Routes and authorization
+## Routes
 
 - `/login` — guests only
 - `/manager/dashboard` — `CREDIT_MANAGER`
 - `/customer/kyb` — `CUSTOMER`
 - `/unauthorized` — authenticated access-denied screen
 
-Functional guards restore a valid minimal session after refresh and enforce role access. Logout uses the shared accessible confirmation dialog before clearing the session.
-
-The application uses Angular hash routing so static GitHub Pages hosting can refresh and open
-protected routes without an origin-side SPA fallback. Deployed URLs therefore use this format:
+Hash routing makes direct navigation and refresh reliable on GitHub Pages:
 
 ```text
 https://deepak1947p.github.io/loan-application-app/#/login
@@ -99,77 +110,55 @@ https://deepak1947p.github.io/loan-application-app/#/manager/dashboard
 https://deepak1947p.github.io/loan-application-app/#/customer/kyb
 ```
 
-Pagination and filter query parameters remain supported after the hash route, for example
+Pagination parameters remain inside the hash URL, for example
 `#/manager/dashboard?page=4&pageSize=10`.
 
 ## Tests and production build
 
 ```bash
-npm test
-npm run build
-```
-
-HTTP tests use Angular's `HttpTestingController` for fetch, failure, PATCH, authentication lookup, and Customer document POST behavior. State tests cover retry, empty responses, successful derived-state recalculation, and no local mutation after update failure.
-
-## Production build
-
-Create an optimized Angular build with:
-
-```bash
+npm test -- --watch=false
 npm run build -- --configuration production
 ```
 
-The browser bundle is written to `dist/loan-application-dashboard/browser`. The production build
-uses the deployed Render API at `https://dmi-loan-mock-api.onrender.com`.
+The browser artifact is generated at:
 
-To simulate a repository subpath locally, build with a representative base href:
+```text
+dist/loan-application-dashboard/browser
+```
+
+To verify a repository subpath locally:
 
 ```bash
 npm run build -- --configuration production --base-href "/loan-application-app/"
 ```
 
-The generated `dist/loan-application-dashboard/browser/index.html` will then contain
-`<base href="/loan-application-app/">`. Static assets use base-relative paths and remain valid under
-the repository subpath.
+The generated index then contains `<base href="/loan-application-app/">`, and the data request
+resolves to `/loan-application-app/data/db.json`.
 
 ## GitHub Pages deployment
 
-The workflow at `.github/workflows/deploy-pages.yml` installs locked dependencies, runs the test
-suite, builds with a base href derived from the GitHub repository name, uploads
-`dist/loan-application-dashboard/browser`, and deploys it with the official GitHub Pages actions.
+`.github/workflows/deploy-pages.yml` installs locked dependencies, runs tests, derives the base href
+from the repository name, builds the application, uploads
+`dist/loan-application-dashboard/browser`, and deploys using official GitHub Pages actions.
 
-After pushing the workflow, configure the repository once:
+Configure the repository once:
 
 ```text
 Settings → Pages → Source: GitHub Actions
 ```
 
-The expected frontend URL is:
+Expected deployment URL:
 
 ```text
 https://deepak1947p.github.io/loan-application-app/
 ```
 
-The Render API must allow the GitHub Pages origin through CORS:
+No CORS configuration, Render service, hosted Node process, or external API is required.
 
-```text
-https://deepak1947p.github.io
-```
+## Demo limitations
 
-The origin does not include the repository path. Verify the deployment by opening `/#/login`,
-signing in with each demo role, refreshing the protected hash routes, changing dashboard pages,
-and submitting Customer KYB document metadata.
-
-The mock server is intended only for local evaluation. It stores PATCH and document-metadata changes directly in `db.json`, so run `npm run generate:mock-data` to restore the deterministic baseline.
-
-## Mock API limitations
-
-- No real authentication, tokens, authorization, encryption, or audit controls.
-- Concurrent edits and database constraints are not modeled.
-- Regenerating `db.json` resets PATCH changes and submitted document metadata.
-- Render services may need a short warm-up after inactivity; the frontend keeps its loading and
-  retry states while waiting for the initial response.
-- Mock API writes are not durable production storage. Render redeploys, restarts, or ephemeral
-  filesystem resets may discard status changes and submitted document metadata.
-- CORS must be configured on the Render API for the GitHub Pages origin. The frontend does not use
-  insecure CORS proxies or `no-cors` workarounds.
+- Authentication and authorization are frontend demonstrations only.
+- Browser-local updates are specific to the current origin and browser profile.
+- Clearing site storage removes saved status changes and Customer document metadata.
+- Different visitors do not share updates.
+- The optional legacy mock server is not part of the GitHub Pages runtime.

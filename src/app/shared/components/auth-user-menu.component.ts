@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { MockApiService } from '../../core/services/mock-api.service';
 import { ConfirmationDialogComponent } from './confirmation-dialog.component';
 
 @Component({
@@ -14,6 +15,17 @@ import { ConfirmationDialogComponent } from './confirmation-dialog.component';
       >
       <small>{{ roleLabel }} <i></i> {{ auth.session()?.email }}</small>
     </div>
+    <button
+      class="reset-demo"
+      type="button"
+      aria-label="Reset Demo Data"
+      title="Reset Demo Data"
+      (click)="resetDemoData()"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 12a8 8 0 1 0 2.3-5.7L4 8M4 4v4h4" />
+      </svg>
+    </button>
     <button
       #logoutButton
       type="button"
@@ -88,6 +100,11 @@ import { ConfirmationDialogComponent } from './confirmation-dialog.component';
     button:hover {
       background: #edf7fd;
     }
+    button.reset-demo {
+      border-width: 1px;
+      border-color: #cbd7e2;
+      color: #66788a;
+    }
     button:active {
       transform: scale(0.96);
     }
@@ -126,11 +143,16 @@ import { ConfirmationDialogComponent } from './confirmation-dialog.component';
 })
 export class AuthUserMenuComponent {
   readonly auth = inject(AuthService);
+  private readonly mockApi = inject(MockApiService);
   private readonly router = inject(Router);
   readonly logoutDialogOpen = signal(false);
   readonly logoutPending = signal(false);
   get roleLabel(): string {
     return this.auth.role() === 'CREDIT_MANAGER' ? 'Credit Manager' : 'Customer';
+  }
+  resetDemoData(): void {
+    this.mockApi.resetDemoData();
+    globalThis.location.reload();
   }
   cancelLogout(): void {
     if (!this.logoutPending()) this.logoutDialogOpen.set(false);

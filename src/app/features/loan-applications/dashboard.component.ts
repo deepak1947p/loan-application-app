@@ -289,7 +289,7 @@ export class DashboardComponent implements OnInit {
         error: () => {
           this.statusUpdating.set(false);
           this.statusDraft.set(current.status);
-          this.statusUpdateError.set('Status update failed. Check the mock API and try again.');
+          this.statusUpdateError.set('Status update failed. Please try again.');
         },
       });
   }

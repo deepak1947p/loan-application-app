@@ -1,101 +1,164 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { firstValueFrom } from 'rxjs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mockApiConfig } from '../../../core/services/mock-api.config';
 import { ApplicationQuery, LoanApplication } from '../../../models/loan-application.model';
 import { LoanApplicationService } from './loan-application.service';
 
-const item: LoanApplication = {
-  id: 'LA-1',
-  applicantName: 'Priya Sharma',
-  loanType: 'Personal',
-  amount: 450000,
-  workflowStage: 'Lead Submitted',
-  status: 'Pending',
-  appliedDate: '2026-01-01',
-  creditScore: 724,
-  assignedTo: 'Rahul Menon',
-  remarks: 'Salary slips pending',
-};
+const applications: LoanApplication[] = [
+  {
+    id: 'LA-1',
+    applicantName: 'Priya Sharma',
+    loanType: 'Personal',
+    amount: 450000,
+    workflowStage: 'Lead Submitted',
+    status: 'Pending',
+    appliedDate: '2026-01-01',
+    creditScore: 724,
+    assignedTo: 'Rahul Menon',
+    remarks: 'Salary slips pending',
+  },
+  {
+    id: 'LA-2',
+    applicantName: 'Aditi Menon',
+    loanType: 'Business',
+    amount: 900000,
+    workflowStage: 'Lead Submitted',
+    status: 'Under Review',
+    appliedDate: '2026-02-01',
+    creditScore: 760,
+    assignedTo: 'Neha Iyer',
+    remarks: 'Review underway',
+  },
+  {
+    id: 'LA-3',
+    applicantName: 'Rohan Patel',
+    loanType: 'Home',
+    amount: 2200000,
+    workflowStage: 'KYC Approved',
+    status: 'Approved',
+    appliedDate: '2026-03-01',
+    creditScore: 780,
+    assignedTo: 'Rahul Menon',
+    remarks: 'KYC completed',
+  },
+];
 const baseQuery: ApplicationQuery = {
   page: 1,
-  pageSize: 10,
+  pageSize: 2,
   sortField: 'appliedDate',
   sortDirection: 'desc',
 };
-const pageBody = { first: 1, prev: null, next: 2, last: 8, pages: 8, items: 77, data: [item] };
 
-describe('LoanApplicationService server pagination', () => {
+describe('LoanApplicationService static API adapter', () => {
   let service: LoanApplicationService;
   let http: HttpTestingController;
+
   beforeEach(() => {
+    vi.useFakeTimers();
+    localStorage.clear();
+    history.replaceState({}, '', location.pathname);
+    TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(LoanApplicationService);
     http = TestBed.inject(HttpTestingController);
   });
-  afterEach(() => http.verify());
 
-  it('requests and normalizes the first page using json-server v1 parameters', () => {
-    let result: unknown;
-    service.getApplications(baseQuery).subscribe((value) => (result = value));
-    const request = http.expectOne((req) => req.url.endsWith('/applications'));
-    expect(request.request.params.get('_page')).toBe('1');
-    expect(request.request.params.get('_per_page')).toBe('10');
-    expect(request.request.params.get('_sort')).toBe('-appliedDate');
-    request.flush(pageBody);
-    expect(result).toEqual({ items: [item], page: 1, pageSize: 10, totalItems: 77, totalPages: 8 });
+  afterEach(() => {
+    http.verify();
+    vi.useRealTimers();
   });
 
-  it('sends workflow, search, date, exact filters and amount sorting before pagination', () => {
-    service
-      .getApplications({
-        page: 3,
+  function flushDatabase(): void {
+    const request = http.expectOne(mockApiConfig.dataUrl);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.url.startsWith('/')).toBe(false);
+    request.flush({ applications, customerDocuments: [] });
+  }
+
+  async function resolve<T>(request: Promise<T>): Promise<T> {
+    await vi.runAllTimersAsync();
+    return request;
+  }
+
+  it('loads the base-relative JSON once and returns only the requested page', async () => {
+    const resultPromise = firstValueFrom(service.getApplications(baseQuery));
+    flushDatabase();
+    const result = await resolve(resultPromise);
+    expect(result).toEqual({
+      items: [applications[2], applications[1]],
+      page: 1,
+      pageSize: 2,
+      totalItems: 3,
+      totalPages: 2,
+    });
+
+    const nextPromise = firstValueFrom(service.getApplications({ ...baseQuery, page: 2 }));
+    const next = await resolve(nextPromise);
+    expect(next.items).toEqual([applications[0]]);
+    http.expectNone(mockApiConfig.dataUrl);
+  });
+
+  it('applies workflow, search, exact, date, amount filters and sorting before slicing', async () => {
+    const resultPromise = firstValueFrom(
+      service.getApplications({
+        page: 1,
         pageSize: 5,
         workflowStage: 'Lead Submitted',
         status: 'Pending',
         loanType: 'Personal',
         search: 'sharma',
-        applicationId: 'LA-2',
+        applicationId: 'LA-1',
         minAmount: 100000,
         maxAmount: 500000,
         startDate: '2026-01-01',
         endDate: '2026-02-01',
         sortField: 'amount',
         sortDirection: 'asc',
-      })
-      .subscribe();
-    const request = http.expectOne((req) => req.url.endsWith('/applications'));
-    expect(request.request.params.get('_page')).toBe('3');
-    expect(request.request.params.get('_per_page')).toBe('5');
-    expect(request.request.params.get('_sort')).toBe('amount');
-    const where = JSON.parse(request.request.params.get('_where') ?? '{}');
-    expect(where.workflowStage.eq).toBe('Lead Submitted');
-    expect(where.appliedDate).toEqual({ gte: '2026-01-01', lte: '2026-02-01' });
-    expect(where.amount).toEqual({ gte: 100000, lte: 500000 });
-    expect(where.or).toHaveLength(7);
-    request.flush({ ...pageBody, pages: 4, items: 18, data: [] });
+      }),
+    );
+    flushDatabase();
+    const result = await resolve(resultPromise);
+    expect(result.items.map(({ id }) => id)).toEqual(['LA-1']);
+    expect(result.totalItems).toBe(1);
   });
 
-  it('gets the dynamic summary and passes fetch failures to the state layer', () => {
-    service.getApplicationSummary().subscribe();
-    http
-      .expectOne('http://localhost:3000/application-summary')
-      .flush({ total: 724, byWorkflowStage: {} });
-    let failed = false;
-    service.getApplications(baseQuery).subscribe({ error: () => (failed = true) });
-    http
-      .expectOne((req) => req.url.endsWith('/applications'))
-      .flush('offline', { status: 503, statusText: 'Unavailable' });
-    expect(failed).toBe(true);
+  it('calculates summary totals from the complete merged dataset', async () => {
+    const resultPromise = firstValueFrom(service.getApplicationSummary());
+    flushDatabase();
+    const summary = await resolve(resultPromise);
+    expect(summary.total).toBe(3);
+    expect(summary.byWorkflowStage['Lead Submitted']).toBe(2);
+    expect(summary.byWorkflowStage['KYC Approved']).toBe(1);
   });
 
-  it('PATCHes only supplied application changes', () => {
-    service.updateApplication('LA-1', { status: 'Approved' }).subscribe();
-    const request = http.expectOne('http://localhost:3000/applications/LA-1');
-    expect(request.request.method).toBe('PATCH');
-    expect(request.request.body).toEqual({ status: 'Approved' });
-    request.flush({ ...item, status: 'Approved' });
+  it('persists status overrides and reset restores the bundled value', async () => {
+    const updatePromise = firstValueFrom(service.updateApplication('LA-1', { status: 'Approved' }));
+    flushDatabase();
+    expect((await resolve(updatePromise)).status).toBe('Approved');
+    expect(localStorage.getItem(mockApiConfig.applicationOverridesKey)).toContain('Approved');
+
+    const refreshedPromise = firstValueFrom(service.getApplicationById('LA-1'));
+    expect((await resolve(refreshedPromise)).status).toBe('Approved');
+    service.resetDemoData();
+    const resetPromise = firstValueFrom(service.getApplicationById('LA-1'));
+    expect((await resolve(resetPromise)).status).toBe('Pending');
+  });
+
+  it('supports an explicit applications failure and succeeds after retry', async () => {
+    history.replaceState({}, '', `${location.pathname}?mockError=applications`);
+    await expect(firstValueFrom(service.getApplications(baseQuery))).rejects.toThrow(
+      'Simulated application request failure',
+    );
+    http.expectNone(mockApiConfig.dataUrl);
+
+    history.replaceState({}, '', location.pathname);
+    const retryPromise = firstValueFrom(service.getApplications(baseQuery));
+    flushDatabase();
+    expect((await resolve(retryPromise)).totalItems).toBe(3);
   });
 });

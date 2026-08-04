@@ -187,9 +187,7 @@ export class KybComponent implements OnInit {
         },
         error: () => {
           this.initialLoading.set(false);
-          this.initialError.set(
-            'Unable to load your KYB details. Check the mock API and try again.',
-          );
+          this.initialError.set('Unable to load your KYB details. Please try again.');
         },
       });
   }
@@ -228,7 +226,7 @@ export class KybComponent implements OnInit {
         },
         error: () => {
           this.submitting.set(false);
-          this.submissionError.set('Document submission failed. Check the mock API and try again.');
+          this.submissionError.set('Document submission failed. Please try again.');
         },
       });
   }
