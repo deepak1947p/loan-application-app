@@ -1,8 +1,8 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'http://localhost:3000',
+  apiBaseUrl: 'https://dmi-loan-mock-api.onrender.com',
   mockLatency: {
-    loginMs: 800,
+    loginMs: 1000,
     initialSkeletonMs: 600,
   },
 } as const;

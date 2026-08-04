@@ -28,7 +28,11 @@ npm run start:app
 
 - Angular: `http://localhost:4200`
 - Mock API: `http://localhost:3000`
-- API base URL is configured in `src/environments/environment.ts` and its production replacement.
+- Development API: `http://localhost:3000`
+- Production API: `https://dmi-loan-mock-api.onrender.com`
+- API base URLs are configured in `src/environments/environment.ts` and
+  `src/environments/environment.production.ts`. Angular replaces the development file during a
+  production build.
 
 ## Mock REST endpoints
 
@@ -86,6 +90,18 @@ The dashboard shows skeletons while `GET /applications` is pending, an API error
 
 Functional guards restore a valid minimal session after refresh and enforce role access. Logout uses the shared accessible confirmation dialog before clearing the session.
 
+The application uses Angular hash routing so static GitHub Pages hosting can refresh and open
+protected routes without an origin-side SPA fallback. Deployed URLs therefore use this format:
+
+```text
+https://deepak1947p.github.io/loan-application-app/#/login
+https://deepak1947p.github.io/loan-application-app/#/manager/dashboard
+https://deepak1947p.github.io/loan-application-app/#/customer/kyb
+```
+
+Pagination and filter query parameters remain supported after the hash route, for example
+`#/manager/dashboard?page=4&pageSize=10`.
+
 ## Tests and production build
 
 ```bash
@@ -95,15 +111,54 @@ npm run build
 
 HTTP tests use Angular's `HttpTestingController` for fetch, failure, PATCH, authentication lookup, and Customer document POST behavior. State tests cover retry, empty responses, successful derived-state recalculation, and no local mutation after update failure.
 
-## Production deployment
+## Production build
 
 Create an optimized Angular build with:
 
 ```bash
-npm run build
+npm run build -- --configuration production
 ```
 
-The browser bundle is written to `dist/loan-application-dashboard/browser`. Deploy that directory to a static host configured with an SPA fallback to `index.html`. The assignment API must run separately with `npm run mock:api`; for a real deployment, replace `apiBaseUrl` in the production environment with a secured backend URL and remove the configurable demo latency.
+The browser bundle is written to `dist/loan-application-dashboard/browser`. The production build
+uses the deployed Render API at `https://dmi-loan-mock-api.onrender.com`.
+
+To simulate a repository subpath locally, build with a representative base href:
+
+```bash
+npm run build -- --configuration production --base-href "/loan-application-app/"
+```
+
+The generated `dist/loan-application-dashboard/browser/index.html` will then contain
+`<base href="/loan-application-app/">`. Static assets use base-relative paths and remain valid under
+the repository subpath.
+
+## GitHub Pages deployment
+
+The workflow at `.github/workflows/deploy-pages.yml` installs locked dependencies, runs the test
+suite, builds with a base href derived from the GitHub repository name, uploads
+`dist/loan-application-dashboard/browser`, and deploys it with the official GitHub Pages actions.
+
+After pushing the workflow, configure the repository once:
+
+```text
+Settings → Pages → Source: GitHub Actions
+```
+
+The expected frontend URL is:
+
+```text
+https://deepak1947p.github.io/loan-application-app/
+```
+
+The Render API must allow the GitHub Pages origin through CORS:
+
+```text
+https://deepak1947p.github.io
+```
+
+The origin does not include the repository path. Verify the deployment by opening `/#/login`,
+signing in with each demo role, refreshing the protected hash routes, changing dashboard pages,
+and submitting Customer KYB document metadata.
 
 The mock server is intended only for local evaluation. It stores PATCH and document-metadata changes directly in `db.json`, so run `npm run generate:mock-data` to restore the deterministic baseline.
 
@@ -112,4 +167,9 @@ The mock server is intended only for local evaluation. It stores PATCH and docum
 - No real authentication, tokens, authorization, encryption, or audit controls.
 - Concurrent edits and database constraints are not modeled.
 - Regenerating `db.json` resets PATCH changes and submitted document metadata.
-- The production Angular environment still points to the local assignment API by design; deployers should replace it with their own backend URL.
+- Render services may need a short warm-up after inactivity; the frontend keeps its loading and
+  retry states while waiting for the initial response.
+- Mock API writes are not durable production storage. Render redeploys, restarts, or ephemeral
+  filesystem resets may discard status changes and submitted document metadata.
+- CORS must be configured on the Render API for the GitHub Pages origin. The frontend does not use
+  insecure CORS proxies or `no-cors` workarounds.

@@ -6,7 +6,7 @@ import { AuthService } from '../../core/auth/auth.service';
   selector: 'app-unauthorized',
   standalone: true,
   template: `<main>
-    <img src="/assets/Logo-final-RGB.svg" alt="DMI Finance" /><span>403</span>
+    <img src="assets/Logo-final-RGB.svg" alt="DMI Finance" /><span>403</span>
     <h1>Access restricted</h1>
     <p>Your account does not have permission to view this page.</p>
     <button (click)="home()">Return to my workspace</button>
