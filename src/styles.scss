@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap');
+:root {
+  font-family: 'Manrope', sans-serif;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+  min-width: 320px;
+  min-height: 100%;
+  font-family: inherit;
+}
+button,
+select,
+input,
+textarea,
+dialog {
+  font-family: inherit;
+}
+button,
+a,
+select {
+  cursor: pointer;
+}
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 3px solid #8bb7ff;
+  outline-offset: 2px;
+}
+body {
+  overflow: hidden;
+}
+app-root {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}

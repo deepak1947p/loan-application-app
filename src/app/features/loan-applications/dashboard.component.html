@@ -1,0 +1,614 @@
+<div
+  class="application-shell"
+  [class.detail-open]="selected()"
+  [class.mobile-filter-open]="filtersOpen()"
+>
+  <section class="workspace">
+    <header class="topbar">
+      <img class="dmi-logo" src="/assets/Logo-final-RGB.svg" alt="DMI Finance" />
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m16 16 4 4" />
+        </svg>
+        <input
+          aria-label="Search all applications"
+          placeholder="Search here"
+          [formControl]="searchControl"
+        />
+        @if (searchControl.value) {
+          <button
+            type="button"
+            aria-label="Clear search"
+            title="Clear search"
+            (click)="clearSearch()"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" /></svg>
+          </button>
+        }
+      </label>
+      <app-auth-user-menu class="nav-right" />
+    </header>
+    <main class="dashboard">
+      @if (!data.initialized() && data.loading()) {
+        <div class="skeleton dashboard-title-skeleton" aria-hidden="true"></div>
+      } @else {
+        <h1 class="dashboard-title-enter">Dashboard</h1>
+      }
+      @if (!data.initialized() && data.loading()) {
+        <section class="stage-grid">
+          @for (i of [1, 2, 3, 4]; track i) {
+            <div class="skeleton stage-skeleton"></div>
+          }
+        </section>
+        <section
+          class="lead-panel table-skeleton"
+          aria-label="Loading application list"
+          aria-busy="true"
+        >
+          <div class="skeleton-toolbar">
+            <span class="skeleton line title-line"></span>
+            <div>
+              <span class="skeleton action-line wide"></span
+              ><span class="skeleton action-line"></span><span class="skeleton action-line"></span>
+            </div>
+          </div>
+          <div class="skeleton-head">
+            @for (column of [1, 2, 3, 4, 5, 6]; track column) {
+              <span class="skeleton line heading-line"></span>
+            }
+          </div>
+          <div class="skeleton-rows">
+            @for (row of [1, 2, 3, 4, 5, 6, 7]; track row) {
+              <div>
+                @for (column of [1, 2, 3, 4, 5, 6]; track column) {
+                  <span class="skeleton line row-line" [class.short]="column === 4"></span>
+                }
+              </div>
+            }
+          </div>
+          <div class="skeleton-footer">
+            <span class="skeleton line footer-line"></span
+            ><span class="skeleton line pages-line"></span>
+          </div>
+        </section>
+      } @else if (!data.initialized() && data.error()) {
+        <section class="state">
+          <b>!</b>
+          <h2>Unable to load leads</h2>
+          <p>We couldn’t retrieve the application list.</p>
+          <button (click)="data.retry()">Retry</button>
+        </section>
+      } @else if (data.initialized() && data.totalApplications() === 0 && !data.error()) {
+        <section class="state">
+          <b>◇</b>
+          <h2>No applications available</h2>
+          <p>New loan applications will appear here.</p>
+        </section>
+      } @else {
+        <section
+          #workflowCarousel
+          class="stage-grid workflow-carousel"
+          aria-label="Workflow stage filters"
+          (scroll)="onCarouselScroll()"
+        >
+          @for (card of stageCards; track card.tone) {
+            <article class="stage-card dashboard-card" [class]="card.tone">
+              <span class="stage-icon">
+                @switch (card.tone) {
+                  @case ('green') {
+                    <svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z" /></svg>
+                  }
+                  @case ('purple') {
+                    <svg viewBox="0 0 24 24">
+                      <path d="M7 3h10l3 3v15H7z" />
+                      <path d="M17 3v4h4M4 7v14h12M10 11h7M10 15h7" />
+                    </svg>
+                  }
+                  @case ('slate') {
+                    <svg viewBox="0 0 24 24">
+                      <path d="M6 3h9l4 4v14H6z" />
+                      <path d="M14 3v5h5M9 14l2 2 4-5" />
+                    </svg>
+                  }
+                  @default {
+                    <svg viewBox="0 0 24 24">
+                      <path d="M8 4h9M8 8h9M9 4c5 0 5 7 0 7H7l9 9M5 4h2" />
+                    </svg>
+                  }
+                }
+              </span>
+              <div class="motif" aria-hidden="true">
+                @switch (card.tone) {
+                  @case ('green') {
+                    <svg viewBox="0 0 100 100"><path d="M8 16h84L61 53v24L39 90V53z" /></svg>
+                  }
+                  @case ('purple') {
+                    <svg viewBox="0 0 100 100">
+                      <path d="M26 8h49l17 17v67H26z" />
+                      <path d="M75 8v20h17M8 26v66h60" />
+                    </svg>
+                  }
+                  @case ('slate') {
+                    <svg viewBox="0 0 100 100">
+                      <path d="M20 7h50l20 20v66H20z" />
+                      <path d="M65 7v25h25M34 58l12 12 23-30" />
+                    </svg>
+                  }
+                  @default {
+                    <svg viewBox="0 0 100 100">
+                      <path d="M31 17h45M31 36h45M35 17c27 0 27 35 0 35H22l43 39M12 17h14" />
+                    </svg>
+                  }
+                }
+              </div>
+              <div class="stage-options">
+                @for (stage of card.stages; track stage) {
+                  <label [class.selected]="selectedRadio() === card.tone + ':' + stage"
+                    ><input
+                      type="radio"
+                      name="workflow-stage"
+                      [value]="stage"
+                      [checked]="selectedRadio() === card.tone + ':' + stage"
+                      (change)="selectStage(stage, card.tone)"
+                    /><span>{{ stage }}</span
+                    ><b>{{ data.workflowCounts()[stage] }}</b></label
+                  >
+                }
+              </div>
+            </article>
+          }
+        </section>
+        <nav class="carousel-navigation" aria-label="Workflow card carousel">
+          <button
+            aria-label="Previous workflow card"
+            [disabled]="activeCard() === 0"
+            (click)="goToCard(activeCard() - 1)"
+          >
+            ‹
+          </button>
+          <div class="carousel-dots">
+            @for (card of stageCards; track card.tone; let index = $index) {
+              <button
+                [class.active]="activeCard() === index"
+                [attr.aria-label]="'Show workflow card ' + (index + 1)"
+                [attr.aria-current]="activeCard() === index ? 'true' : null"
+                (click)="goToCard(index)"
+              ></button>
+            }
+          </div>
+          <button
+            aria-label="Next workflow card"
+            [disabled]="activeCard() === stageCards.length - 1"
+            (click)="goToCard(activeCard() + 1)"
+          >
+            ›
+          </button>
+        </nav>
+        <section class="lead-panel dashboard-table-enter">
+          <div class="lead-toolbar">
+            <div class="lead-heading">
+              <h2>
+                {{ data.selectedStage() ?? 'All Applications' }}
+                <span>({{ data.totalItems() }})</span>
+              </h2>
+              @if (data.selectedStage()) {
+                <button class="clear-stage" (click)="clearStage()">Clear selection</button>
+              }
+            </div>
+            <div class="toolbar-actions">
+              <button
+                #filterButton
+                class="filter-button"
+                [class.active]="filtersOpen()"
+                aria-label="Toggle application filters"
+                (click)="toggleFilters()"
+              >
+                <span class="filter-label-full">Apply Filter</span>
+                <span class="filter-label-short">Filter</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 5h18l-7 8v5l-4 2v-7z" />
+                </svg></button
+              ><button
+                class="icon-button"
+                [class.active]="dateActive()"
+                aria-label="Filter applications by applied date"
+                title="Filter by applied date"
+                (click)="openCalendar()"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="5" width="18" height="16" rx="2" />
+                  <path d="M7 3v4M17 3v4M3 10h18" />
+                </svg>
+              </button>
+              @if (dateActive()) {
+                <button
+                  class="clear-date-filter"
+                  aria-label="Clear applied date filter"
+                  (click)="clearDate()"
+                >
+                  Clear date
+                </button>
+              }
+              <button class="icon-button" aria-label="Download filtered leads" (click)="download()">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3v12M7 10l5 5 5-5" />
+                  <path d="M5 20h14" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          @if (filtersOpen()) {
+            <button
+              class="filter-sheet-backdrop"
+              aria-label="Close application filters"
+              (click)="closeFilters()"
+            ></button>
+          }
+          @if (filtersOpen()) {
+            <div class="filter-panel">
+              <div class="filter-sheet-head">
+                <h3>Filter applications</h3>
+                <button aria-label="Close application filters" (click)="closeFilters()">×</button>
+              </div>
+              <label
+                >Application ID<input
+                  type="search"
+                  placeholder="e.g. LA-2026-000041"
+                  [ngModel]="data.filters().applicationId"
+                  (ngModelChange)="filter('applicationId', $event)"
+              /></label>
+              <label
+                >Status<select
+                  [ngModel]="data.filters().status"
+                  (ngModelChange)="filter('status', $event)"
+                >
+                  <option>All</option>
+                  @for (status of statuses; track status) {
+                    <option [value]="status">{{ status }}</option>
+                  }
+                </select></label
+              >
+              <label
+                >Minimum amount<input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  placeholder="Greater than"
+                  [attr.max]="data.filters().maxAmount ?? null"
+                  [attr.aria-invalid]="amountRangeInvalid()"
+                  aria-describedby="amount-range-error"
+                  [ngModel]="data.filters().minAmount"
+                  (ngModelChange)="filter('minAmount', $event)"
+              /></label>
+              <label
+                >Maximum amount<input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  placeholder="Less than"
+                  [attr.min]="data.filters().minAmount ?? 0"
+                  [attr.aria-invalid]="amountRangeInvalid()"
+                  aria-describedby="amount-range-error"
+                  [ngModel]="data.filters().maxAmount"
+                  (ngModelChange)="filter('maxAmount', $event)"
+              /></label>
+              <label
+                >Loan type<select
+                  [ngModel]="data.filters().loanType"
+                  (ngModelChange)="filter('loanType', $event)"
+                >
+                  <option>All</option>
+                  @for (type of types; track type) {
+                    <option [value]="type">{{ type }}</option>
+                  }
+                </select></label
+              >
+              <label
+                >Sort<select
+                  [ngModel]="data.filters().sort"
+                  (ngModelChange)="filter('sort', $event)"
+                >
+                  <option value="date-desc">Newest first</option>
+                  <option value="date-asc">Oldest first</option>
+                  <option value="amount-asc">Amount: low to high</option>
+                  <option value="amount-desc">Amount: high to low</option>
+                </select></label
+              >
+              <div class="filter-sheet-actions">
+                <button class="reset" (click)="clear()">Clear</button>
+                <button class="filter-done" (click)="closeFilters()">Apply</button>
+              </div>
+              @if (amountRangeInvalid()) {
+                <p id="amount-range-error" class="amount-range-error" role="alert">
+                  Minimum amount cannot be greater than maximum amount. Enter values of zero or
+                  more.
+                </p>
+              }
+            </div>
+          }
+          @if (calendarOpen()) {
+            <section class="date-popover" role="dialog" aria-labelledby="date-filter-title">
+              <div class="date-title">
+                <h3 id="date-filter-title">Applied date range</h3>
+                <button aria-label="Close date filter" (click)="cancelDate()">×</button>
+              </div>
+              <div class="date-fields">
+                <label
+                  >Start Date<input
+                    type="date"
+                    [max]="draftEnd() || today"
+                    [ngModel]="draftStart()"
+                    (ngModelChange)="updateStart($event)"
+                /></label>
+                <label
+                  >End Date<input
+                    type="date"
+                    [min]="draftStart()"
+                    [max]="today"
+                    [ngModel]="draftEnd()"
+                    (ngModelChange)="updateEnd($event)"
+                /></label>
+              </div>
+              @if (dateInvalid()) {
+                <p class="date-error" role="alert">
+                  Choose a valid range that does not extend beyond today.
+                </p>
+              }
+              <div class="date-actions">
+                <button class="date-clear" (click)="clearDate()">Clear</button
+                ><button class="date-cancel" (click)="cancelDate()">Cancel</button
+                ><button class="date-apply" [disabled]="dateInvalid()" (click)="applyDate()">
+                  Apply
+                </button>
+              </div>
+            </section>
+          }
+          @if (data.loading()) {
+            <div class="page-loading" aria-live="polite" aria-busy="true">
+              <span class="sr-only">Loading application page</span>
+              @for (row of [1, 2, 3, 4, 5, 6, 7]; track row) {
+                <div class="skeleton page-row"></div>
+              }
+            </div>
+          } @else if (data.error()) {
+            <div class="empty-filter" role="alert">
+              <b>!</b>
+              <h3>Unable to load applications</h3>
+              <p>The requested application page could not be retrieved.</p>
+              <button (click)="data.retry()">Retry</button>
+            </div>
+          } @else if (data.totalItems() === 0) {
+            <div class="empty-filter">
+              <b>⌕</b>
+              <h3>No matching leads</h3>
+              <p>No {{ data.selectedStage() ?? 'applications' }} match the active filters.</p>
+              <button (click)="clear()">Clear filters</button>
+            </div>
+          } @else {
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Applicant Name</th>
+                    <th>Application ID</th>
+                    <th>Loan Amount</th>
+                    <th>Loan Type</th>
+                    <th>Status</th>
+                    <th>Applied Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of pageItems(); track item.id) {
+                    <tr
+                      tabindex="0"
+                      [class.active-row]="selected()?.id === item.id"
+                      [attr.aria-selected]="selected()?.id === item.id"
+                      (click)="open(item)"
+                      (keydown.enter)="open(item)"
+                    >
+                      <td>{{ item.applicantName }}</td>
+                      <td>{{ item.id }}</td>
+                      <td>{{ money(item.amount) }}</td>
+                      <td>{{ item.loanType }}</td>
+                      <td>
+                        <span class="status-badge" [class]="statusClass(item.status)">{{
+                          item.status
+                        }}</span>
+                      </td>
+                      <td>{{ item.appliedDate | date: 'MMM dd, yyyy' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="mobile-list">
+              @for (item of pageItems(); track item.id) {
+                <button
+                  [class.active-card]="selected()?.id === item.id"
+                  [attr.aria-pressed]="selected()?.id === item.id"
+                  (click)="open(item)"
+                >
+                  <span
+                    ><b>{{ item.applicantName }}</b
+                    ><small>{{ item.id }}</small></span
+                  ><span class="status-badge" [class]="statusClass(item.status)">{{
+                    item.status
+                  }}</span
+                  ><strong>{{ money(item.amount) }}</strong
+                  ><small
+                    >{{ item.loanType }} · {{ item.appliedDate | date: 'MMM dd, yyyy' }}</small
+                  >
+                  <span class="card-action">View details →</span>
+                </button>
+              }
+            </div>
+            <footer class="pagination">
+              <span
+                >Showing {{ data.rangeStart() }} to {{ data.rangeEnd() }} of
+                {{ data.totalItems() }} entries</span
+              >
+              <nav aria-label="Pagination">
+                <button
+                  aria-label="Previous page"
+                  (click)="navigateToPage(page() - 1)"
+                  [disabled]="page() === 1 || data.loading()"
+                >
+                  ‹
+                </button>
+                @for (token of pageTokens(); track $index) {
+                  <button
+                    [attr.aria-label]="tokenLabel(token)"
+                    [class.current]="token === page()"
+                    [class.ellipsis]="typeof token !== 'number'"
+                    [disabled]="data.loading()"
+                    (click)="goToToken(token)"
+                  >
+                    {{ typeof token === 'number' ? token : '…' }}
+                  </button>
+                }
+                <button
+                  aria-label="Next page"
+                  (click)="navigateToPage(page() + 1)"
+                  [disabled]="page() === totalPages() || data.loading()"
+                >
+                  ›
+                </button>
+              </nav>
+              <nav class="mobile-pagination-nav" aria-label="Mobile pagination">
+                <button
+                  aria-label="Previous page"
+                  (click)="navigateToPage(page() - 1)"
+                  [disabled]="page() === 1 || data.loading()"
+                >
+                  ‹
+                </button>
+                @for (token of mobilePageTokens(); track $index) {
+                  <button
+                    [attr.aria-label]="tokenLabel(token)"
+                    [class.current]="token === page()"
+                    [class.ellipsis]="typeof token !== 'number'"
+                    [disabled]="data.loading()"
+                    (click)="goToToken(token)"
+                  >
+                    {{ typeof token === 'number' ? token : '…' }}
+                  </button>
+                }
+                <button
+                  aria-label="Next page"
+                  (click)="navigateToPage(page() + 1)"
+                  [disabled]="page() === totalPages() || data.loading()"
+                >
+                  ›
+                </button>
+              </nav>
+            </footer>
+          }
+        </section>
+      }
+    </main>
+  </section>
+  @if (selected(); as item) {
+    <div class="drawer-backdrop" (click)="close()"></div>
+    <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+      <div class="drawer-head">
+        <div>
+          <p>APPLICATION DETAILS</p>
+          <h2 id="detail-title">{{ item.applicantName }}</h2>
+          <span>{{ item.id }}</span>
+        </div>
+        <button class="drawer-close" aria-label="Close details" (click)="close()">×</button>
+      </div>
+      <div class="drawer-body">
+        <div class="gauge">
+          <svg viewBox="0 0 180 105" aria-hidden="true">
+            <path d="M20 90 A70 70 0 0 1 160 90" pathLength="100" />
+            <path
+              class="value"
+              d="M20 90 A70 70 0 0 1 160 90"
+              pathLength="100"
+              [attr.stroke-dasharray]="((item.creditScore - 300) / 600) * 100 + ' 100'"
+            />
+          </svg>
+          <div>
+            <strong>{{ item.creditScore }}</strong
+            ><span>{{ scoreLabel(item.creditScore) }}</span
+            ><small>Range 300–900</small>
+          </div>
+        </div>
+        <dl>
+          <div>
+            <dt>Loan amount</dt>
+            <dd>
+              {{
+                item.amount.toLocaleString('en-IN', {
+                  style: 'currency',
+                  currency: 'INR',
+                  maximumFractionDigits: 0,
+                })
+              }}
+            </dd>
+          </div>
+          <div>
+            <dt>Loan type</dt>
+            <dd>{{ item.loanType }}</dd>
+          </div>
+          <div>
+            <dt>Workflow stage</dt>
+            <dd>{{ item.workflowStage }}</dd>
+          </div>
+          <div>
+            <dt>Applied</dt>
+            <dd>{{ item.appliedDate | date: 'dd MMMM yyyy' }}</dd>
+          </div>
+          <div>
+            <dt>Assigned to</dt>
+            <dd>{{ item.assignedTo }}</dd>
+          </div>
+          <div class="wide">
+            <dt>Remarks</dt>
+            <dd>{{ item.remarks }}</dd>
+          </div>
+        </dl>
+        <div class="status-update">
+          <label for="status-update">Application status</label
+          ><select
+            id="status-update"
+            [ngModel]="statusDraft()"
+            (ngModelChange)="requestStatus($event)"
+          >
+            @for (status of statuses; track status) {
+              <option [value]="status">{{ status }}</option>
+            }</select
+          ><small>Changes require confirmation.</small>
+        </div>
+      </div>
+    </aside>
+  }
+</div>
+@if (pendingStatus()) {
+  <app-confirmation-dialog
+    title="Confirm status change"
+    [message]="statusConfirmationMessage()"
+    icon="change"
+    confirmLabel="Confirm change"
+    cancelLabel="Cancel"
+    [loading]="statusUpdating()"
+    (cancel)="cancelStatus()"
+    (confirm)="confirmStatus()"
+  />
+}
+@if (statusUpdateError()) {
+  <div class="toast error-toast" role="alert" aria-live="assertive">
+    <span aria-hidden="true">!</span>
+    <strong>{{ statusUpdateError() }}</strong>
+    <button aria-label="Dismiss error" (click)="statusUpdateError.set('')">×</button>
+  </div>
+}
+@if (toast(); as notice) {
+  <div class="toast" [attr.data-status]="notice.status" role="status" aria-live="polite">
+    <span aria-hidden="true">{{ toastIcon(notice.status) }}</span>
+    <strong>{{ notice.message }}</strong>
+    <button aria-label="Dismiss notification" (click)="dismissToast()">×</button>
+  </div>
+}

@@ -1,0 +1,195 @@
+<div class="customer-page" [class.sheet-is-open]="sheetOpen()">
+  <header class="app-header">
+    <img src="/assets/Logo-final-RGB.svg" alt="DMI Finance" />
+    <span class="mobile-title">Verify Your KYB</span>
+    <app-auth-user-menu />
+  </header>
+
+  <main class="customer-workspace">
+    <aside class="brand-panel" aria-labelledby="brand-heading">
+      <div class="brand-copy">
+        <div class="shield" aria-hidden="true">
+          <svg viewBox="0 0 64 64">
+            <path d="M32 5 53 13v17c0 14-8 24-21 30C19 54 11 44 11 30V13L32 5Z" />
+            <path d="m22 32 7 7 14-16" />
+          </svg>
+        </div>
+        <p class="eyebrow">BUSINESS VERIFICATION</p>
+        <h1 id="brand-heading">Complete your business verification securely</h1>
+        <p>
+          Upload your business documents to verify your identity and continue your loan application.
+        </p>
+        <ul>
+          <li>Secure document verification</li>
+          <li>Quick and guided process</li>
+          <li>Your information remains protected</li>
+          <li>Continue without visiting a branch</li>
+        </ul>
+      </div>
+    </aside>
+
+    <section class="form-column" [attr.aria-busy]="initialLoading()">
+      @if (initialLoading()) {
+        <div class="kyb-view kyb-skeleton" aria-label="Loading Verify Your KYB">
+          <div class="kyb-skeleton-heading skeleton-block"></div>
+          <div class="kyb-skeleton-stepper">
+            @for (step of [1, 2, 3, 4, 5]; track step) {
+              <span class="skeleton-circle"></span>
+            }
+          </div>
+          <div class="kyb-skeleton-content">
+            <div class="skeleton-block instruction-block"></div>
+            <div class="skeleton-block field-block"></div>
+            <div class="skeleton-block field-block"></div>
+            <div class="skeleton-block upload-block"></div>
+          </div>
+          <div class="kyb-skeleton-footer">
+            <div class="skeleton-block continue-block"></div>
+            <div class="skeleton-block security-block"></div>
+          </div>
+        </div>
+      } @else if (initialError()) {
+        <div class="kyb-view kyb-load-error" role="alert">
+          <span aria-hidden="true">!</span>
+          <h2>Unable to load KYB</h2>
+          <p>{{ initialError() }}</p>
+          <button (click)="retryInitialLoad()">Retry</button>
+        </div>
+      } @else {
+        <div class="kyb-view kyb-enter">
+          <div class="kyb-header">
+            <h1>Verify Your KYB</h1>
+            <ol class="stepper" aria-label="Application progress">
+              @for (
+                step of [
+                  'Basic details',
+                  'Loan offers',
+                  'Verify KYC',
+                  'Address & e-mandate',
+                  'Sign agreement',
+                ];
+                track step;
+                let i = $index
+              ) {
+                <li [class.done]="i < 2" [class.active]="i === 2">
+                  <span>{{ i < 2 ? '✓' : i + 1 }}</span
+                  ><small>{{ step }}</small>
+                </li>
+              }
+            </ol>
+          </div>
+
+          @if (complete()) {
+            <div class="complete kyb-form-content">
+              <span>✓</span>
+              <h2>KYB documents submitted</h2>
+              <p>
+                Your business documents have been saved securely. We’ll review them and keep you
+                updated.
+              </p>
+              <button (click)="reset()">Upload again</button>
+            </div>
+          } @else {
+            <form [formGroup]="form" (ngSubmit)="continue()">
+              <div class="kyb-form-content">
+                <p class="instruction">Please upload your business registration document</p>
+                @if (uploadedDocuments().length) {
+                  <div class="uploaded-summary" aria-label="Uploaded documents">
+                    @for (document of uploadedDocuments(); track document.type) {
+                      <p>
+                        <span>✓</span><b>{{ document.type }}</b
+                        ><small>{{ document.name }}</small>
+                      </p>
+                    }
+                  </div>
+                }
+                <label>
+                  Document Type
+                  <select formControlName="documentType" aria-describedby="document-type-error">
+                    <option value="" disabled>Select document type</option>
+                    @for (type of documentTypes; track type) {
+                      <option [value]="type" [disabled]="usedTypes().includes(type)">
+                        {{ type }}{{ usedTypes().includes(type) ? ' — uploaded' : '' }}
+                      </option>
+                    }
+                  </select>
+                  <small id="document-type-error" class="field-error">
+                    @if (form.controls.documentType.touched && form.controls.documentType.invalid) {
+                      Select a document type.
+                    }
+                  </small>
+                </label>
+                <label>
+                  Document number
+                  <input
+                    formControlName="documentNumber"
+                    placeholder="Enter document number"
+                    autocomplete="off"
+                    [attr.aria-invalid]="
+                      form.controls.documentNumber.touched && !!documentNumberError()
+                    "
+                  />
+                  <small class="field-error">
+                    @if (form.controls.documentNumber.touched && documentNumberError()) {
+                      {{ documentNumberError() }}
+                    }
+                  </small>
+                </label>
+                <div class="upload" [class.uploaded]="file()" [class.invalid]="fileError()">
+                  <input
+                    #picker
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    (change)="selectFile($event)"
+                    aria-label="Select business document"
+                  />
+                  @if (file(); as selectedFile) {
+                    <span class="upload-icon" aria-hidden="true">▤</span
+                    ><strong>{{ selectedFile.name }}</strong
+                    ><small>{{ formatSize(selectedFile.size) }}</small
+                    ><button type="button" (click)="picker.click()">Change File</button>
+                  } @else {
+                    <span class="upload-icon" aria-hidden="true">⇧</span
+                    ><strong>Select file to upload.</strong
+                    ><small>JPG, PNG or PDF, up to 2.5 MB</small
+                    ><button type="button" (click)="picker.click()">Select</button>
+                  }
+                </div>
+                @if (fileError()) {
+                  <p class="upload-error" role="alert">⚠ {{ fileError() }}</p>
+                }
+              </div>
+              <div class="kyb-footer">
+                <button class="continue" type="submit" [disabled]="!canContinue()">Continue</button>
+                <p class="secure"><span aria-hidden="true">♢</span> Your information is secure</p>
+              </div>
+            </form>
+          }
+        </div>
+      }
+    </section>
+  </main>
+</div>
+
+@if (sheetOpen()) {
+  <div class="sheet-overlay" (click)="closeSheet()"></div>
+  <section
+    #confirmationSheet
+    class="bottom-sheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="sheet-title"
+    (keydown)="trapSheetFocus($event)"
+  >
+    <div class="handle" aria-hidden="true"></div>
+    <div class="folder" aria-hidden="true"><span></span></div>
+    <h2 id="sheet-title">Do you have second business<br />document?</h2>
+    @if (submissionError()) {
+      <p class="submission-error" role="alert">{{ submissionError() }}</p>
+    }
+    <button class="primary-action" [disabled]="submitting()" (click)="uploadSecond()">
+      {{ submitting() ? 'Submitting…' : 'Upload Second Document' }}
+    </button>
+    <button class="skip" [disabled]="submitting()" (click)="skip()">Skip & Proceed</button>
+  </section>
+}

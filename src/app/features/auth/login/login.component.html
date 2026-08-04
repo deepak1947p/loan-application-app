@@ -1,0 +1,79 @@
+<main class="login-page">
+  <section class="login-card" aria-labelledby="login-title">
+    <img src="/assets/Logo-final-RGB.svg" alt="DMI Finance" />
+    <div class="intro">
+      <p>SECURE PORTAL</p>
+      <h1 id="login-title">Welcome back</h1>
+      <span>Sign in to continue to your DMI Finance workspace.</span>
+    </div>
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <label for="username">Email address</label>
+      <input
+        id="username"
+        type="email"
+        formControlName="username"
+        autocomplete="username"
+        placeholder="name@example.com"
+      />
+      @if (form.controls.username.touched && form.controls.username.hasError('required')) {
+        <small class="error">Email address is required.</small>
+      } @else if (form.controls.username.touched && form.controls.username.hasError('email')) {
+        <small class="error">Enter a valid email address.</small>
+      }
+      <label for="password">Password</label>
+      <div class="password-field">
+        <input
+          id="password"
+          [type]="showPassword() ? 'text' : 'password'"
+          formControlName="password"
+          autocomplete="current-password"
+          placeholder="Enter your password"
+        />
+        <button
+          type="button"
+          [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+          (click)="showPassword.set(!showPassword())"
+        >
+          {{ showPassword() ? 'Hide' : 'Show' }}
+        </button>
+      </div>
+      @if (form.controls.password.touched && form.controls.password.invalid) {
+        <small class="error">Password is required.</small>
+      }
+      @if (loginError()) {
+        <p class="login-error" role="alert">{{ loginError() }}</p>
+      }
+      <button class="login-button" type="submit" [disabled]="loading()">
+        @if (loading()) {
+          <span class="button-spinner" aria-hidden="true"></span>
+          <span>Signing in...</span>
+        } @else {
+          <span>Sign in</span>
+        }
+      </button>
+    </form>
+    <details>
+      <summary>Demo credentials</summary>
+      <p>Choose a role to populate the assignment credentials.</p>
+      <div>
+        <button
+          type="button"
+          [class.selected]="selectedDemoRole() === 'manager'"
+          [attr.aria-pressed]="selectedDemoRole() === 'manager'"
+          (click)="useDemo('manager')"
+        >
+          Credit Manager
+        </button>
+        <button
+          type="button"
+          [class.selected]="selectedDemoRole() === 'customer'"
+          [attr.aria-pressed]="selectedDemoRole() === 'customer'"
+          (click)="useDemo('customer')"
+        >
+          Customer
+        </button>
+      </div>
+    </details>
+    <footer>Demo access only · Production authentication requires a secure backend.</footer>
+  </section>
+</main>
