@@ -38,8 +38,9 @@ export class LoginComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((success) => {
         this.loading.set(false);
-        this.form.controls.password.setValue('');
         if (!success) {
+          this.form.controls.password.setValue('');
+          this.form.controls.password.markAsUntouched();
           this.loginError.set(
             this.auth.loginApiUnavailable()
               ? 'Unable to connect to the login service. Please make sure the mock API is running.'
