@@ -91,6 +91,7 @@ export function isAmountRangeInvalid(
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
+  host: { '(document:pointerdown)': 'onDocumentPointerDown($event)' },
 })
 export class DashboardComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
@@ -118,6 +119,7 @@ export class DashboardComponent implements OnInit {
   readonly statusDraft = signal<LoanStatus>('Pending');
   readonly toast = signal<StatusToast | null>(null);
   readonly statusUpdating = signal(false);
+  readonly downloadPending = signal(false);
   readonly statusUpdateError = signal('');
   readonly filtersOpen = signal(false);
   readonly calendarOpen = signal(false);
@@ -148,6 +150,8 @@ export class DashboardComponent implements OnInit {
   );
   readonly carousel = viewChild<ElementRef<HTMLElement>>('workflowCarousel');
   readonly filterButton = viewChild<ElementRef<HTMLButtonElement>>('filterButton');
+  readonly calendarButton = viewChild<ElementRef<HTMLButtonElement>>('calendarButton');
+  readonly datePopover = viewChild<ElementRef<HTMLElement>>('datePopover');
   ngOnInit(): void {
     const initialPagination = normalizePaginationParams(this.route.snapshot.queryParamMap);
     this.urlPagination.set(initialPagination);
@@ -305,6 +309,18 @@ export class DashboardComponent implements OnInit {
     this.draftEnd.set(this.data.filters().toDate ?? '');
     this.calendarOpen.set(true);
   }
+  onDocumentPointerDown(event: PointerEvent): void {
+    if (!this.calendarOpen()) return;
+    const target = event.target as Node | null;
+    if (
+      target &&
+      (this.calendarButton()?.nativeElement.contains(target) ||
+        this.datePopover()?.nativeElement.contains(target))
+    ) {
+      return;
+    }
+    this.calendarOpen.set(false);
+  }
   updateStart(value: string): void {
     this.draftStart.set(value);
     if (value <= this.today && this.draftEnd() && this.draftEnd() < value) this.draftEnd.set('');
@@ -368,23 +384,67 @@ export class DashboardComponent implements OnInit {
     return status === 'Approved' ? '✓' : status === 'Rejected' ? '!' : 'i';
   }
   download(): void {
-    const rows = this.data.filtered();
-    const csv = [
-      'Applicant Name,Application ID,Loan Amount,Loan Type,Status,Applied Date',
-      ...rows.map(
-        (x) =>
-          `"${x.applicantName}",${x.id},${x.amount},${x.loanType},${x.status},${x.appliedDate}`,
-      ),
-    ].join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'dmi-applications.csv';
-    link.click();
-    URL.revokeObjectURL(url);
+    if (this.downloadPending() || this.data.loading()) return;
+    this.downloadPending.set(true);
+    this.data
+      .getAllFilteredApplications()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (rows) => {
+          const csv = [
+            [
+              'Application ID',
+              'Applicant Name',
+              'Loan Type',
+              'Loan Amount',
+              'Workflow Stage',
+              'Status',
+              'Applied Date',
+              'Credit Score',
+              'Assigned To',
+              'Remarks',
+            ].join(','),
+            ...rows.map((item) =>
+              [
+                item.id,
+                item.applicantName,
+                item.loanType,
+                item.amount,
+                item.workflowStage,
+                item.status,
+                item.appliedDate,
+                item.creditScore,
+                item.assignedTo,
+                item.remarks,
+              ]
+                .map((value) => this.csvCell(value))
+                .join(','),
+            ),
+          ].join('\n');
+          const url = URL.createObjectURL(
+            new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }),
+          );
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${this.data.selectedStage() ?? 'all-applications'}.csv`
+            .toLocaleLowerCase()
+            .replaceAll(' ', '-');
+          link.click();
+          URL.revokeObjectURL(url);
+          this.downloadPending.set(false);
+        },
+        error: () => {
+          this.downloadPending.set(false);
+          this.toast.set({ status: 'Rejected', message: 'Unable to prepare the download.' });
+        },
+      });
   }
   private localDate(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+  private csvCell(value: string | number): string {
+    const text = String(value);
+    return `"${text.replaceAll('"', '""')}"`;
   }
   private restoreFilterFocus(): void {
     setTimeout(() => this.filterButton()?.nativeElement.focus());

@@ -311,6 +311,7 @@
 }
 .application-shell {
   height: 100vh;
+  height: 100dvh;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 0;
   overflow: hidden;
@@ -1806,9 +1807,9 @@ tbody tr.active-row:focus {
   }
   .pagination {
     height: auto;
-    min-height: 48px;
+    min-height: calc(48px + env(safe-area-inset-bottom, 0px));
     justify-content: center;
-    padding: 7px 8px;
+    padding: 7px 8px calc(7px + env(safe-area-inset-bottom, 0px));
   }
   .pagination > nav:not(.mobile-pagination-nav) {
     display: none;

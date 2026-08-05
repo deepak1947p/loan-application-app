@@ -210,6 +210,7 @@
                   <path d="M3 5h18l-7 8v5l-4 2v-7z" />
                 </svg></button
               ><button
+                #calendarButton
                 class="icon-button"
                 [class.active]="dateActive()"
                 aria-label="Filter applications by applied date"
@@ -230,7 +231,12 @@
                   Clear date
                 </button>
               }
-              <button class="icon-button" aria-label="Download filtered leads" (click)="download()">
+              <button
+                class="icon-button"
+                aria-label="Download filtered applications"
+                [disabled]="downloadPending() || data.loading()"
+                (click)="download()"
+              >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 3v12M7 10l5 5 5-5" />
                   <path d="M5 20h14" />
@@ -328,7 +334,12 @@
             </div>
           }
           @if (calendarOpen()) {
-            <section class="date-popover" role="dialog" aria-labelledby="date-filter-title">
+            <section
+              #datePopover
+              class="date-popover"
+              role="dialog"
+              aria-labelledby="date-filter-title"
+            >
               <div class="date-title">
                 <h3 id="date-filter-title">Applied date range</h3>
                 <button aria-label="Close date filter" (click)="cancelDate()">×</button>

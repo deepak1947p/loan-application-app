@@ -157,4 +157,21 @@ describe('LoanDataService server state', () => {
     expect(service.page()).toBe(3);
     expect(service.totalPages()).toBe(3);
   });
+
+  it('requests the complete filtered result set for CSV export', async () => {
+    service.setStage('Lead Submitted', false);
+    service.load(null);
+    await finishInitialLoad();
+    api.getApplications.mockReturnValueOnce(of(response({ pageSize: 87, totalPages: 1 })));
+    let exported: LoanApplication[] = [];
+    service.getAllFilteredApplications().subscribe((items) => (exported = items));
+    expect(api.getApplications).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        page: 1,
+        pageSize: 87,
+        workflowStage: 'Lead Submitted',
+      }),
+    );
+    expect(exported).toEqual([application]);
+  });
 });

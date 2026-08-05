@@ -190,6 +190,13 @@ export class LoanDataService {
     );
   }
 
+  getAllFilteredApplications(): Observable<LoanApplication[]> {
+    const pageSize = Math.max(1, this.totalItems());
+    return this.applicationApi
+      .getApplications(this.buildQuery(1, pageSize))
+      .pipe(map((response) => response.items));
+  }
+
   private applySummary(summary: ApplicationSummary): void {
     this.totalApplications.set(summary.total);
     this.workflowCounts.set({ ...EMPTY_COUNTS(), ...summary.byWorkflowStage });
